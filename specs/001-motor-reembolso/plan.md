@@ -1,6 +1,6 @@
 # Plano Técnico — Motor de Cálculo de Reembolso
 
-**Versão:** 1.0 · **Baseado na spec:** 1.0
+**Versão:** 2.0 · **Baseado na spec:** 2.0
 
 ---
 
@@ -36,8 +36,11 @@ Estado mutável interno durante cálculo: mapa `(data, categoria) → reembolso 
 
 ## 4. Como a política é representada
 
-Constantes em `src/reembolso/policy.py`. Alteração de limite = editar constantes + spec + testes.
-Sem arquivo externo YAML para manter escopo mínimo.
+- **v3-compat:** `PoliticaConfig.v3_compat()` embutido (sem `--politica`).
+- **v4:** JSON externo `politica-v4.json` → `PoliticaConfig.from_dict`.
+- **Câmbio:** `cambio.json` → `TabelaCambio`; omitido quando só BRL.
+
+Limites **não** ficam mais hardcoded em produção v4.
 
 ## 5. Decisões técnicas
 

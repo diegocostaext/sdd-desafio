@@ -63,8 +63,33 @@
   - **Atende:** entrega SDD
   - **Aceite:** arquivos preenchidos em `specs/` e `docs/`
 
-## Pendentes (Dia 2)
+## Fase 5 — Envelope Dia 2 (v4)
 
-- [ ] **T-013** — Absorver mudança do envelope lacrado
-  - **Atende:** (a definir após anúncio)
-  - **Aceite:** spec atualizada + testes verdes
+- [x] **T-013** — Atualizar spec v2.0 e DECISIONS D-002
+  - **Atende:** RN-013, RN-014, AMB-011, AMB-012
+  - **Aceite:** `spec.md` e `DECISIONS.md` descrevem v4
+
+- [x] **T-014** — Adicionar fixtures `exemplos/envelope/*.json`
+  - **Atende:** dados oficiais do gist
+  - **Aceite:** arquivos commitados localmente
+
+- [x] **T-015** — Carregar `politica-v4.json` (`PoliticaConfig`)
+  - **Atende:** RN-014
+  - **Aceite:** CC desconhecido usa `padrao`; CC-ENG bloqueia hospedagem
+
+- [x] **T-016** — Conversão `cambio.json` (`TabelaCambio`)
+  - **Atende:** RN-013, AMB-011
+  - **Aceite:** EUR fim de semana usa última PTAX; GBP sem taxa → zero
+
+- [x] **T-017** — CLI `--politica` e `--cambio`; engine v4
+  - **Atende:** interface envelope
+  - **Aceite:** v3-compat quando flags omitidas
+
+- [x] **T-018** — Testes `tests/test_envelope.py`
+  - **Atende:** critérios de aceite v4 da spec
+  - **Aceite:** totais 1143,26 e 373,76; testes v3 ainda passam
+
+## Opcional (não implementado)
+
+- [ ] **T-019** — Fila aprovação manual > R$ 500 (item C envelope)
+  - **Motivo:** opcional; spec mantida consistente sem este estado
