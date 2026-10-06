@@ -14,7 +14,15 @@ Na raiz do repositório:
 
 ```bash
 export PYTHONPATH=src
+# Política v3-compat (sem arquivos externos):
 python -m reembolso calcular --input exemplos/despesas-exemplo.json --output resultado.json
+
+# Política v4 (envelope Dia 2):
+python -m reembolso calcular \
+  --input exemplos/envelope/despesas-envelope.json \
+  --output resultado-envelope.json \
+  --politica exemplos/envelope/politica-v4.json \
+  --cambio exemplos/envelope/cambio.json
 ```
 
 PowerShell:
@@ -42,6 +50,7 @@ python -m pytest tests/ -v
 | `tests/` | Testes por requisito (RN/AMB) |
 | `docs/RELATORIO.md` | Relatório do desafio |
 | `docs/sessions/` | Exports de sessões com o agente |
+| `exemplos/envelope/` | Política v4, câmbio e JSONs do envelope |
 
 ## Documentação do desafio
 

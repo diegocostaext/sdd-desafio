@@ -62,13 +62,20 @@
 
 ## Envelope (Dia 2)
 
-**Status:** pendente até receber mudança às 10h.
+**Fonte:** https://gist.github.com/Sassine/c9c7d72a4aae51306752c4f9f87a32dc
 
-**Plano:** atualizar `spec.md` → `DECISIONS.md` (D-002) → `tasks.md` (T-013) → código → testes.
+**Caminho seguido:** spec v2.0 → `DECISIONS.md` D-002 → tasks T-013..T-018 → código → testes.
 
-**Arquivos tocados / tempo:** (preencher após envelope)
+**Arquivos tocados (implementação v4):** `spec.md`, `DECISIONS.md`, `tasks.md`, `politica_config.py`,
+`cambio.py`, `engine.py`, `models.py`, `__main__.py`, `tests/test_envelope.py`, `exemplos/envelope/*`.
 
-**Spec que facilitaria:** limites centralizados em `policy.py`; RN numeradas nos testes.
+**O que a arquitetura absorveu:** política externa e câmbio injetados na CLI; v3-compat sem flags.
+
+**O que resistiu:** categorias parciais por CC (AMB-012) exigiram regra explícita na spec.
+
+**Item C (> R$ 500):** não implementado (opcional no envelope).
+
+**Números de aceite:** envelope comercial → R$ 1143,26; CC desconhecido → R$ 373,76.
 
 ---
 
