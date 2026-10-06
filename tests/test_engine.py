@@ -17,7 +17,7 @@ EXEMPLO = ROOT / "exemplos" / "despesas-exemplo.json"
 
 def _payload(**overrides):
     base = {
-        "colaborador": {"id": "c-1", "nome": "Teste"},
+        "colaborador": {"id": "c-1", "nome": "Teste", "centro_custo": "CC-GENERICO"},
         "periodo": {
             "competencia": "2026-07",
             "inicio": "2026-07-01",
@@ -37,8 +37,9 @@ def _item(resultado, despesa_id: str):
 
 
 def test_rn004_nf_obrigatoria_apenas_acima_de_100():
-    assert exige_nota_fiscal(Decimal("100.00")) is False
-    assert exige_nota_fiscal(Decimal("100.01")) is True
+    limite = Decimal("100")
+    assert exige_nota_fiscal(Decimal("100.00"), limite) is False
+    assert exige_nota_fiscal(Decimal("100.01"), limite) is True
 
 
 def test_amb009_normaliza_categoria():
@@ -222,5 +223,5 @@ def test_arquivo_exemplo_integracao():
     assert len(r.itens) == 14
     assert _item(r, "d-007").valor_reembolsavel == Decimal("0")
     assert _item(r, "d-013").valor_reembolsavel == Decimal("0")
-    assert _item(r, "d-014").valor_reembolsavel == Decimal("0")
+    assert _item(r, "d-014").valor_reembolsavel == Decimal("60.00")
     assert r.total_reembolsavel == money("585.43")
