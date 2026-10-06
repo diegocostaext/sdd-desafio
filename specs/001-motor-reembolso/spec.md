@@ -1,6 +1,6 @@
 # Spec — Motor de Cálculo de Reembolso
 
-**Versão:** 1.0 · **Status:** aprovada para implementação · **Última alteração:** 2026-09-29
+**Versão:** 2.0 · **Status:** vigente (v4 envelope) · **Última alteração:** 2026-10-06
 
 > Este arquivo descreve o QUÊ e o PORQUÊ. Não cita linguagem, biblioteca ou estrutura de pastas.
 
@@ -15,7 +15,7 @@ despesas de um colaborador em um período, calcule quanto é reembolsável e exp
 ## 2. Objetivo
 
 Para cada despesa informada, o sistema produz valor reembolsável, status e motivos textuais
-alinhados à política v3 (com ambiguidades resolvidas aqui), mais totais do lote.
+alinhados à política vigente (v3-compat ou v4 externa), mais totais do lote em BRL.
 
 ## 3. Fora de escopo
 
@@ -23,7 +23,7 @@ alinhados à política v3 (com ambiguidades resolvidas aqui), mais totais do lot
 - Cadastro ou edição de despesas; apenas cálculo sobre JSON recebido.
 - Inferir viagem por heurística em descrição/fornecedor (sem campo explícito).
 - Dividir automaticamente hospedagem multi-noite usando NLP na descrição.
-- Conversão de moeda; todos os valores são BRL.
+- Fila de aprovação manual para itens acima de R$ 500 (item C do envelope — opcional).
 - Tolerância a JSON malformado além de falha explícita na CLI (erro de leitura).
 
 ## 4. Entrada e saída
@@ -34,7 +34,7 @@ alinhados à política v3 (com ambiguidades resolvidas aqui), mais totais do lot
 |---|---|---|---|
 | `colaborador.id` | string | Identificador do colaborador | sim |
 | `colaborador.nome` | string | Nome (informativo) | sim |
-| `colaborador.centro_custo` | string | Centro de custo (informativo) | sim |
+| `colaborador.centro_custo` | string | Centro de custo (define tabela v4) | sim |
 | `periodo.competencia` | string `YYYY-MM` | Competência contábil | sim |
 | `periodo.inicio` | string `YYYY-MM-DD` | Primeiro dia elegível | sim |
 | `periodo.fim` | string `YYYY-MM-DD` | Último dia elegível | sim |
@@ -44,9 +44,13 @@ alinhados à política v3 (com ambiguidades resolvidas aqui), mais totais do lot
 | `despesas[].categoria` | string | Tipo de despesa | sim |
 | `despesas[].descricao` | string | Descrição livre | sim |
 | `despesas[].fornecedor` | string | Fornecedor | sim |
-| `despesas[].valor` | number | Valor em BRL (pode ser negativo) | sim |
+| `despesas[].valor` | number | Valor na moeda informada (pode ser negativo) | sim |
+| `despesas[].moeda` | string ISO 4217 | Moeda do lançamento | não (default: `BRL`) |
 | `despesas[].tem_nota_fiscal` | boolean | Indica presença de NF | sim |
 | `em_viagem` | boolean | Colaborador em viagem no período | não (default: `false`) |
+
+**Arquivos externos (v4):** `politica-v4.json` (limites por centro de custo) e `cambio.json`
+(taxas por data). Sem `--politica`, aplica-se tabela v3-compat (limites únicos, sem câmbio).
 
 **Saída:**
 
@@ -54,13 +58,16 @@ alinhados à política v3 (com ambiguidades resolvidas aqui), mais totais do lot
 |---|---|---|
 | `colaborador.id` | string | Eco do colaborador |
 | `periodo.competencia` | string | Eco da competência |
-| `total_solicitado` | number | Soma dos `valor` **positivos** do lote |
-| `total_reembolsavel` | number | Soma dos `valor_reembolsavel` (mínimo 0) |
+| `politica_versao` | string | Ex.: `v3-compat`, `v4` |
+| `total_solicitado` | number | Soma dos valores **positivos convertidos para BRL** |
+| `total_reembolsavel` | number | Soma dos `valor_reembolsavel` em BRL (mínimo 0) |
 | `itens[]` | array | Um elemento por despesa de entrada (mesma ordem de processamento) |
 | `itens[].id` | string | Id da despesa |
 | `itens[].status` | enum | `reembolsado_integral`, `reembolsado_parcial`, `nao_reembolsavel` |
-| `itens[].valor_informado` | number | Valor original |
-| `itens[].valor_reembolsavel` | number | Valor aprovado (pode ser negativo em estorno) |
+| `itens[].valor_informado` | number | Valor na moeda original |
+| `itens[].moeda` | string | Presente se diferente de BRL |
+| `itens[].valor_em_brl` | number | Valor convertido usado nas regras |
+| `itens[].valor_reembolsavel` | number | Valor aprovado em BRL (pode ser negativo em estorno) |
 | `itens[].motivos` | string[] | Justificativas referenciando RN-xxx |
 
 **Exemplo reduzido:** duas alimentações no mesmo dia (R$ 72,50 e R$ 38,00) → primeiro item
@@ -160,6 +167,24 @@ o saldo daquele dia; não gera reembolso negativo além do estorno do item.
 **Origem:** necessidade de duplicata e limite diário determinísticos  
 **Aceite:** Duplicatas: menor `id` prevalece.
 
+### RN-013 — Conversão cambial (v4)
+
+**Regra:** Limites e NF usam valor em BRL. Campo `moeda` default `BRL`. Conversão:
+`valor_brl = valor × taxa` da tabela `cambio.json`. Usa a **última data de cotação ≤ data da
+despesa**. Moeda ausente na tabela → reembolso zero.
+
+**Origem:** envelope v4 item B  
+**Aceite:** EUR 22 em 2026-07-14 com taxa 5,93 → BRL 130,46 antes do limite diário.
+
+### RN-014 — Limites por centro de custo (v4)
+
+**Regra:** Limites vêm de `politica-v4.json`. Se `centro_custo` **não** está em
+`centros_custo`, usa-se bloco `padrao`. Se **está** listado, usa-se **somente** a tabela
+daquele centro (sem herdar categorias do padrão). Limite `0` → categoria bloqueada.
+
+**Origem:** envelope v4 item A  
+**Aceite:** `CC-ENG-PLATAFORMA` + hospedagem → R$ 0; `CC-SUPORTE-N2` desconhecido → padrão.
+
 ## 6. Ambiguidades identificadas e decisões
 
 ### AMB-001 — “R$ 60 por dia” é por despesa ou por dia?
@@ -242,6 +267,23 @@ o saldo daquele dia; não gera reembolso negativo além do estorno do item.
 **Justificativa:** Política não distingue; almoço de sábado segue limite de alimentação.  
 **Regra afetada:** RN-001
 
+### AMB-011 — “Taxa da data da despesa” em fim de semana
+
+**Texto original:** "A conversão usa a taxa da data da despesa."  
+**O que não está claro:** Sábado/feriado sem PTAX publicada.  
+**Decisão:** Usar cotação do **último dia útil com taxa ≤ data da despesa**.  
+**Justificativa:** Alinha ao observado em `cambio.json` (apenas dias úteis).  
+**Regra afetada:** RN-013
+
+### AMB-012 — “Política padrão” vs tabela parcial do centro
+
+**Texto original:** "Alguns centros... aplica-se a política padrão."  
+**O que não está claro:** Centro listado com subset de categorias (ex.: `CC-ADM`).  
+**Decisão:** Centro listado → **apenas** categorias da sua tabela; demais → não cobertas.  
+**Centro ausente** → bloco `padrao` inteiro.  
+**Justificativa:** Evita que `CC-ADM` herde hospedagem do padrão sem previsão explícita.  
+**Regra afetada:** RN-014
+
 ## 7. Casos de borda
 
 | Caso | Entrada | Comportamento esperado | Regra |
@@ -264,20 +306,24 @@ Por despesa, após ordenação global:
 
 1. Competência (RN-006)  
 2. Duplicata (RN-007)  
-3. Categoria elegível (RN-008/RN-009)  
-4. Estorno se `valor < 0` (RN-010) — encerra item  
-5. Nota fiscal (RN-004) — se falhar, zero  
-6. Limite diário com viagem (RN-001, RN-005, RN-003)  
-7. Arredondamento na escrita (RN-011)
+3. Conversão para BRL (RN-013) — se falhar, zero  
+4. Categoria elegível por centro (RN-008/RN-009/RN-014)  
+5. Limite zero explícito (RN-014)  
+6. Estorno se `valor_brl < 0` (RN-010)  
+7. Nota fiscal sobre `valor_brl` (RN-004)  
+8. Limite diário com viagem (RN-001, RN-005, RN-003)  
+9. Arredondamento na escrita (RN-011)
 
 ## 9. Critérios de aceite
 
 - [ ] CLI `calcular --input --output` produz JSON conforme seção 4.
-- [ ] `exemplos/despesas-exemplo.json` → `total_reembolsavel` = R$ 585,43.
-- [ ] Cada RN-001..RN-012 possui teste automatizado nomeado ou comentado.
+- [ ] `exemplos/despesas-exemplo.json` (v3-compat) → `total_reembolsavel` = R$ 585,43.
+- [ ] `exemplos/envelope/despesas-envelope.json` + v4 → `total_reembolsavel` = R$ 1143,26.
+- [ ] `exemplos/envelope/despesas-envelope-cc-desconhecido.json` → R$ 373,76.
+- [ ] Cada RN-001..RN-014 possui teste automatizado.
 - [ ] Cada item recusado ou parcial traz ao menos um motivo citando RN.
 
 ## 10. O que fica em aberto
 
-- **Envelope Dia 2:** aguardando mudança oficial; registrar em `DECISIONS.md` quando publicada.
-- **Viagem:** sem `em_viagem`, colaborador assume limites normais (pode divergir de viagem real não informada).
+- **Aprovação manual > R$ 500:** fora de escopo (item C opcional do envelope).
+- **Viagem:** sem `em_viagem`, limites normais mesmo com despesas internacionais.
